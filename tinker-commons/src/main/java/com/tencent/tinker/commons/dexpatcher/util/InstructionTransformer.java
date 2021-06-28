@@ -103,6 +103,16 @@ public final class InstructionTransformer {
             super.visitRegisterRangeInsn(currentAddress, opcode, mappedIndex, indexType, target, literal, a, registerCount);
         }
 
+        @Override
+        public void visitInvokePolymorphicInstruction(int currentAddress, int opcode, int methodIndex, int indexType, int protoIndex, int[] registers) {
+            super.visitInvokePolymorphicInstruction(currentAddress, opcode, methodIndex, indexType, protoIndex, registers);
+        }
+
+        @Override
+        public void visitInvokePolymorphicRangeInstruction(int currentAddress, int opcode, int methodIndex, int indexType, int c, int registerCount, int protoIndex) {
+            super.visitInvokePolymorphicRangeInstruction(currentAddress, opcode, methodIndex, indexType, c, registerCount, protoIndex);
+        }
+
         private int transformIndexIfNeeded(int index, int indexType) {
             switch (indexType) {
                 case InstructionCodec.INDEX_TYPE_STRING_REF: {
