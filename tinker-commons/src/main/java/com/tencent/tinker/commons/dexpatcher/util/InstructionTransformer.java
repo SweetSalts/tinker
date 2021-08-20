@@ -105,11 +105,15 @@ public final class InstructionTransformer {
 
         @Override
         public void visitInvokePolymorphicInstruction(int currentAddress, int opcode, int methodIndex, int indexType, int protoIndex, int[] registers) {
+            methodIndex = indexMap.adjustMethodIdIndex(methodIndex);
+            protoIndex = indexMap.adjustProtoIdIndex(protoIndex);
             super.visitInvokePolymorphicInstruction(currentAddress, opcode, methodIndex, indexType, protoIndex, registers);
         }
 
         @Override
         public void visitInvokePolymorphicRangeInstruction(int currentAddress, int opcode, int methodIndex, int indexType, int c, int registerCount, int protoIndex) {
+            methodIndex = indexMap.adjustMethodIdIndex(methodIndex);
+            protoIndex = indexMap.adjustProtoIdIndex(protoIndex);
             super.visitInvokePolymorphicRangeInstruction(currentAddress, opcode, methodIndex, indexType, c, registerCount, protoIndex);
         }
 
@@ -126,6 +130,13 @@ public final class InstructionTransformer {
                 }
                 case InstructionCodec.INDEX_TYPE_METHOD_REF: {
                     return indexMap.adjustMethodIdIndex(index);
+                }
+                case InstructionCodec.INDEX_TYPE_METHOD_AND_PROTO_REF: {
+                    throw new IllegalArgumentException(
+                            "METHOD_AND_PROTO_REF should not use this method to do transform.");
+                }
+                case InstructionCodec.INDEX_TYPE_CALL_SITE_REF: {
+                    return indexMap.adjustCallSiteIdIndex(index);
                 }
                 default: {
                     return index;
