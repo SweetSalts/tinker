@@ -68,8 +68,8 @@ import tinker.sample.android.game.events.EventBus;
 import tinker.sample.android.game.events.ui.BackGameEvent;
 import tinker.sample.android.game.ui.PopupManager;
 import tinker.sample.android.game.utils.FontLoader;
-import tinker.sample.android.game.utils.Utils;
-import tinker.sample.android.util.Util;
+import tinker.sample.android.game.utils.GameUtils;
+import tinker.sample.android.util.Utils;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "Tinker.MainActivity";
@@ -315,7 +315,7 @@ public class MainActivity extends AppCompatActivity {
 //        Log.e(TAG, "i am on patch onResume");
 
         super.onResume();
-        Util.setBackground(false);
+        Utils.setBackground(false);
 
         if (hasRequiredPermissions()) {
             mTvMessage.setVisibility(View.GONE);
@@ -329,7 +329,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        Util.setBackground(true);
+        Utils.setBackground(true);
     }
 
     @Override
@@ -353,9 +353,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setBackgroundImage() {
-        Bitmap bitmap = Utils.scaleDown(R.drawable.background, Utils.screenWidth(), Utils.screenHeight());
-        bitmap = Utils.crop(bitmap, Utils.screenHeight(), Utils.screenWidth());
-        bitmap = Utils.downscaleBitmap(bitmap, 2);
+        Bitmap bitmap = GameUtils.scaleDown(R.drawable.background, GameUtils.screenWidth(), GameUtils.screenHeight());
+        bitmap = GameUtils.crop(bitmap, GameUtils.screenHeight(), GameUtils.screenWidth());
+        bitmap = GameUtils.downscaleBitmap(bitmap, 2);
         mBackgroundImage.setImageBitmap(bitmap);
     }
 

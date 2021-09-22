@@ -3,7 +3,7 @@ package tinker.sample.android.game.themes;
 import android.graphics.Bitmap;
 import java.util.ArrayList;
 import tinker.sample.android.game.common.Shared;
-import tinker.sample.android.game.utils.Utils;
+import tinker.sample.android.game.utils.GameUtils;
 
 public class Themes {
 
@@ -51,7 +51,7 @@ public class Themes {
 	public static Bitmap getBackgroundImage(Theme theme) {
 		String drawableResourceName = theme.backgroundImageUrl.substring(Themes.URI_DRAWABLE.length());
 		int drawableResourceId = Shared.context.getResources().getIdentifier(drawableResourceName, "drawable", Shared.context.getPackageName());
-		Bitmap bitmap = Utils.scaleDown(drawableResourceId, Utils.screenWidth(), Utils.screenHeight());
+		Bitmap bitmap = GameUtils.scaleDown(drawableResourceId, GameUtils.screenWidth(), GameUtils.screenHeight());
 		return bitmap;
 	}
 

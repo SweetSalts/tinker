@@ -51,7 +51,7 @@ def gitSha() {
     }
 }
 
-def javaVersion = JavaVersion.VERSION_1_7
+def javaVersion = JavaVersion.VERSION_1_8
 
 android {
     compileSdkVersion 28
@@ -91,7 +91,7 @@ android {
 
     defaultConfig {
         applicationId "tinker.sample.android"
-        minSdkVersion 26
+        minSdkVersion 16
         targetSdkVersion 26
         versionCode 1
         versionName "1.0.0"

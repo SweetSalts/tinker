@@ -24,7 +24,7 @@ import tinker.sample.android.game.events.ui.FlipCardEvent;
 import tinker.sample.android.game.model.BoardArrangment;
 import tinker.sample.android.game.model.BoardConfiguration;
 import tinker.sample.android.game.model.Game;
-import tinker.sample.android.game.utils.Utils;
+import tinker.sample.android.game.utils.GameUtils;
 
 public class BoardView extends LinearLayout {
 
@@ -50,7 +50,7 @@ public class BoardView extends LinearLayout {
 		int margin = getResources().getDimensionPixelSize(R.dimen.margine_top);
 		int padding = getResources().getDimensionPixelSize(R.dimen.board_padding);
 		mScreenHeight = getResources().getDisplayMetrics().heightPixels - margin - padding*2;
-		mScreenWidth = getResources().getDisplayMetrics().widthPixels - padding*2 - Utils.px(20);
+		mScreenWidth = getResources().getDisplayMetrics().widthPixels - padding*2 - GameUtils.px(20);
 		mViewReference = new HashMap<Integer, TileView>();
 		setClipToPadding(false);
 	}

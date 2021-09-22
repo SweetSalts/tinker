@@ -7,7 +7,7 @@ import android.graphics.RectF;
 import android.media.ThumbnailUtils;
 import tinker.sample.android.game.common.Shared;
 
-public class Utils {
+public class GameUtils {
 
 	public static int px(int dp) {
 		return (int) (Shared.context.getResources().getDisplayMetrics().density * dp);

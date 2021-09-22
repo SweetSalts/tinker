@@ -24,5 +24,5 @@ import tinker.sample.android.BuildConfig;
  */
 public class BaseBuildInfo {
     public static String TEST_MESSAGE = "I won't change with tinker patch!";
-    public static String BASE_TINKER_ID = BuildConfig.TINKER_ID;
+    public static String BASE_TINKER_ID = "6414e95";
 }

@@ -20,7 +20,7 @@ import tinker.sample.android.game.common.Music;
 import tinker.sample.android.game.common.Shared;
 import tinker.sample.android.game.events.ui.StartEvent;
 import tinker.sample.android.game.ui.PopupManager;
-import tinker.sample.android.game.utils.Utils;
+import tinker.sample.android.game.utils.GameUtils;
 
 public class MenuFragment extends Fragment {
 
@@ -79,7 +79,7 @@ public class MenuFragment extends Fragment {
 	protected void animateAllAssetsOff(AnimatorListenerAdapter adapter) {
 		// title
 		// 120dp + 50dp + buffer(30dp)
-		ObjectAnimator titleAnimator = ObjectAnimator.ofFloat(mTitle, "translationY", Utils.px(-200));
+		ObjectAnimator titleAnimator = ObjectAnimator.ofFloat(mTitle, "translationY", GameUtils.px(-200));
 		titleAnimator.setInterpolator(new AccelerateInterpolator(2));
 		titleAnimator.setDuration(300);
 
@@ -92,17 +92,17 @@ public class MenuFragment extends Fragment {
 		tooltipAnimator.setDuration(100);
 
 		// settings button
-		ObjectAnimator settingsAnimator = ObjectAnimator.ofFloat(mSettingsGameButton, "translationY", Utils.px(120));
+		ObjectAnimator settingsAnimator = ObjectAnimator.ofFloat(mSettingsGameButton, "translationY", GameUtils.px(120));
 		settingsAnimator.setInterpolator(new AccelerateInterpolator(2));
 		settingsAnimator.setDuration(300);
 
 		// google play button
-		ObjectAnimator googlePlayAnimator = ObjectAnimator.ofFloat(mGooglePlayGameButton, "translationY", Utils.px(120));
+		ObjectAnimator googlePlayAnimator = ObjectAnimator.ofFloat(mGooglePlayGameButton, "translationY", GameUtils.px(120));
 		googlePlayAnimator.setInterpolator(new AccelerateInterpolator(2));
 		googlePlayAnimator.setDuration(300);
 
 		// start button
-		ObjectAnimator startButtonAnimator = ObjectAnimator.ofFloat(mStartGameButton, "translationY", Utils.px(130));
+		ObjectAnimator startButtonAnimator = ObjectAnimator.ofFloat(mStartGameButton, "translationY", GameUtils.px(130));
 		startButtonAnimator.setInterpolator(new AccelerateInterpolator(2));
 		startButtonAnimator.setDuration(300);
 

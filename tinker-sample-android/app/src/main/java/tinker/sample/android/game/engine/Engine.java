@@ -35,7 +35,7 @@ import tinker.sample.android.game.themes.Theme;
 import tinker.sample.android.game.themes.Themes;
 import tinker.sample.android.game.ui.PopupManager;
 import tinker.sample.android.game.utils.Clock;
-import tinker.sample.android.game.utils.Utils;
+import tinker.sample.android.game.utils.GameUtils;
 
 public class Engine extends EventObserverAdapter {
 
@@ -98,7 +98,7 @@ public class Engine extends EventObserverAdapter {
 
 				@Override
 				protected Bitmap doInBackground(Void... params) {
-					Bitmap bitmap = Utils.scaleDown(R.drawable.background, Utils.screenWidth(), Utils.screenHeight());
+					Bitmap bitmap = GameUtils.scaleDown(R.drawable.background, GameUtils.screenWidth(), GameUtils.screenHeight());
 					return bitmap;
 				}
 
@@ -139,9 +139,9 @@ public class Engine extends EventObserverAdapter {
 
 			@Override
 			protected TransitionDrawable doInBackground(Void... params) {
-				Bitmap bitmap = Utils.scaleDown(R.drawable.background, Utils.screenWidth(), Utils.screenHeight());
+				Bitmap bitmap = GameUtils.scaleDown(R.drawable.background, GameUtils.screenWidth(), GameUtils.screenHeight());
 				Bitmap backgroundImage = Themes.getBackgroundImage(mSelectedTheme);
-				backgroundImage = Utils.crop(backgroundImage, Utils.screenHeight(), Utils.screenWidth());
+				backgroundImage = GameUtils.crop(backgroundImage, GameUtils.screenHeight(), GameUtils.screenWidth());
 				Drawable backgrounds[] = new Drawable[2];
 				backgrounds[0] = new BitmapDrawable(Shared.context.getResources(), bitmap);
 				backgrounds[1] = new BitmapDrawable(Shared.context.getResources(), backgroundImage);

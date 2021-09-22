@@ -4,7 +4,7 @@ import android.graphics.Bitmap;
 import java.util.Map;
 import tinker.sample.android.game.common.Shared;
 import tinker.sample.android.game.themes.Themes;
-import tinker.sample.android.game.utils.Utils;
+import tinker.sample.android.game.utils.GameUtils;
 
 /**
  * Before game starts, engine build new board
@@ -30,8 +30,8 @@ public class BoardArrangment {
 		if (string.contains(Themes.URI_DRAWABLE)) {
 			String drawableResourceName = string.substring(Themes.URI_DRAWABLE.length());
 			int drawableResourceId = Shared.context.getResources().getIdentifier(drawableResourceName, "drawable", Shared.context.getPackageName());
-			Bitmap bitmap = Utils.scaleDown(drawableResourceId, size, size);
-			return Utils.crop(bitmap, size, size);
+			Bitmap bitmap = GameUtils.scaleDown(drawableResourceId, size, size);
+			return GameUtils.crop(bitmap, size, size);
 		}
 		return null;
 	}

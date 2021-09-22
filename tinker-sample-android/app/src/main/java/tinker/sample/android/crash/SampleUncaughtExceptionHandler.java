@@ -28,7 +28,7 @@ import com.tencent.tinker.loader.shareutil.ShareTinkerInternals;
 
 import tinker.sample.android.reporter.SampleTinkerReport;
 import tinker.sample.android.util.TinkerManager;
-import tinker.sample.android.util.Util;
+import tinker.sample.android.util.Utils;
 
 /**
  * optional, use dynamic configuration is better way
@@ -80,7 +80,7 @@ public class SampleUncaughtExceptionHandler implements Thread.UncaughtExceptionH
         boolean isXposed = false;
         while (throwable != null) {
             if (!isXposed) {
-                isXposed = Util.isXposedExists(throwable);
+                isXposed = Utils.isXposedExists(throwable);
             }
 
             // xposed?
