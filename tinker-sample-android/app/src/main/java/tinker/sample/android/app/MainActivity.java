@@ -21,6 +21,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
@@ -34,6 +35,7 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -58,12 +60,23 @@ import tinker.sample.android.Constant;
 import tinker.sample.android.R;
 import tinker.sample.android.api.CloudGameApi;
 import tinker.sample.android.api.param.ServerResponse;
-import tinker.sample.android.util.Utils;
+import tinker.sample.android.game.common.Shared;
+import tinker.sample.android.game.engine.Engine;
+import tinker.sample.android.game.engine.ScreenController;
+import tinker.sample.android.game.engine.ScreenController.Screen;
+import tinker.sample.android.game.events.EventBus;
+import tinker.sample.android.game.events.ui.BackGameEvent;
+import tinker.sample.android.game.ui.PopupManager;
+import tinker.sample.android.game.utils.FontLoader;
+import tinker.sample.android.game.utils.Utils;
+import tinker.sample.android.util.Util;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "Tinker.MainActivity";
 
     private TextView mTvMessage;
+
+    private ImageView mBackgroundImage;
 
     private String mClientSession;
 
@@ -87,6 +100,35 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initLocalGamePatch() {
+        initGameView();
+    }
+
+    private void initGame() {
+        Log.d(TAG, "initGame: ");
+
+        Shared.activity = this;
+        Shared.engine.start();
+        Shared.engine.setBackgroundImageView(mBackgroundImage);
+        // set background
+        setBackgroundImage();
+
+        // set menu
+        ScreenController.getInstance().openScreen(Screen.MENU);
+    }
+
+    private void initGameView() {
+        Log.d(TAG, "initGameView: ");
+
+        mBackgroundImage = (ImageView) findViewById(R.id.background_image);
+
+        Button startLocalGameButton = findViewById(R.id.startLocalGame);
+        startLocalGameButton.setVisibility(View.VISIBLE);
+        startLocalGameButton.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                initGame();
+            }
+        });
 
     }
 
@@ -122,8 +164,12 @@ public class MainActivity extends AppCompatActivity {
         Log.e(TAG, "i am on onCreate classloader:" + MainActivity.class.getClassLoader().toString());
         //test resource change
         Log.e(TAG, "i am on onCreate string:" + getResources().getString(R.string.test_resource));
-//        Log.e(TAG, "i am on patch onCreate");
+        Log.e(TAG, "i am on patch onCreate");
         mCloudGameApi = new CloudGameApi(this);
+        FontLoader.loadFonts(this);
+        Shared.context = getApplicationContext();
+        Shared.engine = Engine.getInstance();
+        Shared.eventBus = EventBus.getInstance();
     }
 
     private void initView() {
@@ -269,7 +315,7 @@ public class MainActivity extends AppCompatActivity {
 //        Log.e(TAG, "i am on patch onResume");
 
         super.onResume();
-        Utils.setBackground(false);
+        Util.setBackground(false);
 
         if (hasRequiredPermissions()) {
             mTvMessage.setVisibility(View.GONE);
@@ -283,16 +329,35 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        Utils.setBackground(true);
+        Util.setBackground(true);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        Shared.engine.stop();
         Log.d(TAG, "onDestroy: ");
         mCloudGameApi.stopGame(Constant.MOBILE_GAME_CODE);
     }
 
+    @Override
+    public void onBackPressed() {
+        if (PopupManager.isShown()) {
+            PopupManager.closePopup();
+            if (ScreenController.getLastScreen() == Screen.GAME) {
+                Shared.eventBus.notify(new BackGameEvent());
+            }
+        } else if (ScreenController.getInstance().onBack()) {
+            super.onBackPressed();
+        }
+    }
+
+    private void setBackgroundImage() {
+        Bitmap bitmap = Utils.scaleDown(R.drawable.background, Utils.screenWidth(), Utils.screenHeight());
+        bitmap = Utils.crop(bitmap, Utils.screenHeight(), Utils.screenWidth());
+        bitmap = Utils.downscaleBitmap(bitmap, 2);
+        mBackgroundImage.setImageBitmap(bitmap);
+    }
 
     /**
      * 开始请求业务后台启动游戏，获取服务端server session

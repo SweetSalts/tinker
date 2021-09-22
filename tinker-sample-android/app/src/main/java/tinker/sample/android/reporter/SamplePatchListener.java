@@ -31,7 +31,7 @@ import java.util.Properties;
 
 import tinker.sample.android.app.BuildInfo;
 import tinker.sample.android.crash.SampleUncaughtExceptionHandler;
-import tinker.sample.android.util.Utils;
+import tinker.sample.android.util.Util;
 
 /**
  * Created by zhangshaowen on 16/4/30.
@@ -67,7 +67,7 @@ public class SamplePatchListener extends DefaultPatchListener {
         int returnCode = super.patchCheck(path, patchMd5);
 
         if (returnCode == ShareConstants.ERROR_PATCH_OK) {
-            returnCode = Utils.checkForPatchRecover(NEW_PATCH_RESTRICTION_SPACE_SIZE_MIN, maxMemory);
+            returnCode = Util.checkForPatchRecover(NEW_PATCH_RESTRICTION_SPACE_SIZE_MIN, maxMemory);
         }
 
         if (returnCode == ShareConstants.ERROR_PATCH_OK) {
@@ -75,7 +75,7 @@ public class SamplePatchListener extends DefaultPatchListener {
             //optional, only disable this patch file with md5
             int fastCrashCount = sp.getInt(patchMd5, 0);
             if (fastCrashCount >= SampleUncaughtExceptionHandler.MAX_CRASH_COUNT) {
-                returnCode = Utils.ERROR_PATCH_CRASH_LIMIT;
+                returnCode = Util.ERROR_PATCH_CRASH_LIMIT;
             }
         }
         // Warning, it is just a sample case, you don't need to copy all of these
@@ -83,13 +83,13 @@ public class SamplePatchListener extends DefaultPatchListener {
         if (returnCode == ShareConstants.ERROR_PATCH_OK) {
             Properties properties = ShareTinkerInternals.fastGetPatchPackageMeta(patchFile);
             if (properties == null) {
-                returnCode = Utils.ERROR_PATCH_CONDITION_NOT_SATISFIED;
+                returnCode = Util.ERROR_PATCH_CONDITION_NOT_SATISFIED;
             } else {
-                String platform = properties.getProperty(Utils.PLATFORM);
+                String platform = properties.getProperty(Util.PLATFORM);
                 TinkerLog.i(TAG, "get platform:" + platform);
                 // check patch platform require
                 if (platform == null || !platform.equals(BuildInfo.PLATFORM)) {
-                    returnCode = Utils.ERROR_PATCH_CONDITION_NOT_SATISFIED;
+                    returnCode = Util.ERROR_PATCH_CONDITION_NOT_SATISFIED;
                 }
             }
         }

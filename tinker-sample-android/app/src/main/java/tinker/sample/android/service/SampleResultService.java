@@ -27,7 +27,7 @@ import com.tencent.tinker.lib.util.TinkerServiceInternals;
 
 import java.io.File;
 
-import tinker.sample.android.util.Utils;
+import tinker.sample.android.util.Util;
 
 /**
  * optional, you can just use DefaultTinkerResultService
@@ -68,14 +68,14 @@ public class SampleResultService extends DefaultTinkerResultService {
             //not like TinkerResultService, I want to restart just when I am at background!
             //if you have not install tinker this moment, you can use TinkerApplicationHelper api
             if (checkIfNeedKill(result)) {
-                if (Utils.isBackground()) {
+                if (Util.isBackground()) {
                     TinkerLog.i(TAG, "it is in background, just restart process");
                     restartProcess();
                 } else {
                     //we can wait process at background, such as onAppBackground
                     //or we can restart when the screen off
                     TinkerLog.i(TAG, "tinker wait screen to restart process");
-                    new Utils.ScreenState(getApplicationContext(), new Utils.ScreenState.IOnScreenOff() {
+                    new Util.ScreenState(getApplicationContext(), new Util.ScreenState.IOnScreenOff() {
                         @Override
                         public void onScreenOff() {
                             restartProcess();
