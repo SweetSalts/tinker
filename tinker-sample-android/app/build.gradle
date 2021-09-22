@@ -15,6 +15,11 @@ dependencies {
         compileOnly("com.tencent.tinker:tinker-android-anno-support:${TINKER_VERSION}") { changing = true }
 
         implementation "androidx.multidex:multidex:2.0.1"
+
+        implementation 'com.android.volley:volley:1.1.1'
+        implementation 'com.google.code.gson:gson:2.8.6'
+        // 云游戏基础SDK
+        implementation(name:'tcgsdk-1.1.0.151_20210901_0501_release', ext:'aar')
         //use to test multiDex
 //    implementation group: 'com.google.guava', name: 'guava', version: '19.0'
 //    implementation "org.scala-lang:scala-library:2.11.7"
@@ -56,6 +61,12 @@ android {
         sourceCompatibility javaVersion
         targetCompatibility javaVersion
     }
+
+    repositories {
+        flatDir {
+            dirs 'libs'
+        }
+    }
     //recommend
     dexOptions {
         jumboMode = true
@@ -80,7 +91,7 @@ android {
 
     defaultConfig {
         applicationId "tinker.sample.android"
-        minSdkVersion 14
+        minSdkVersion 16
         targetSdkVersion 26
         versionCode 1
         versionName "1.0.0"

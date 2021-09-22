@@ -19,6 +19,7 @@ package tinker.sample.android.app;
 import android.Manifest;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.os.Build;
@@ -28,41 +29,108 @@ import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.tencent.tcgsdk.api.LogLevel;
+import com.tencent.tcgsdk.api.ScaleType;
+import com.tencent.tcgsdk.api.mobile.Configuration;
+import com.tencent.tcgsdk.api.mobile.IMobileTcgSdk;
+import com.tencent.tcgsdk.api.mobile.ITcgMobileListener;
+import com.tencent.tcgsdk.api.mobile.MobileSurfaceView;
+import com.tencent.tcgsdk.api.mobile.MobileTcgSdk;
 import com.tencent.tinker.lib.library.TinkerLoadLibrary;
 import com.tencent.tinker.lib.tinker.Tinker;
 import com.tencent.tinker.lib.tinker.TinkerInstaller;
 import com.tencent.tinker.loader.shareutil.ShareConstants;
 import com.tencent.tinker.loader.shareutil.ShareTinkerInternals;
 
+import java.util.Locale;
+import tinker.sample.android.Constant;
 import tinker.sample.android.R;
+import tinker.sample.android.api.CloudGameApi;
+import tinker.sample.android.api.param.ServerResponse;
 import tinker.sample.android.util.Utils;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "Tinker.MainActivity";
 
-    private TextView mTvMessage = null;
+    private TextView mTvMessage;
+
+    private String mClientSession;
+
+    // 手游视图
+    private MobileSurfaceView mGameView;
+    // 云手游SDK调用接口
+    private IMobileTcgSdk mSDK;
+    // 业务后台交互的API
+    private CloudGameApi mCloudGameApi;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        init();
+        initWindow();
+        initView();
+        initSdk();
+        askForRequiredPermissions();
+
+        initLocalGamePatch();
+    }
+
+    private void initLocalGamePatch() {
+
+    }
+
+    private void initSdk() {
+        // 创建Builder
+        MobileTcgSdk.Builder builder = new MobileTcgSdk.Builder(
+                this,
+                Constant.APP_ID,
+                mTcgLifeCycleImpl, // 生命周期回调
+                mGameView.getViewRenderer());
+
+        // 设置日志级别
+        builder.logLevel(LogLevel.VERBOSE);
+
+        // 通过Builder创建SDK接口实例
+        mSDK = builder.build();
+
+        // 给游戏视图设置SDK实例
+        mGameView.setSDK(mSDK);
+
+        // 让画面和视图一样大,画面可能被拉伸
+        mGameView.setScaleType(ScaleType.ASPECT_FILL);
+    }
+
+    private void initWindow() {
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
+    }
+
+    private void init() {
         boolean isARKHotRunning = ShareTinkerInternals.isArkHotRuning();
         Log.e(TAG, "ARK HOT Running status = " + isARKHotRunning);
         Log.e(TAG, "i am on onCreate classloader:" + MainActivity.class.getClassLoader().toString());
         //test resource change
         Log.e(TAG, "i am on onCreate string:" + getResources().getString(R.string.test_resource));
 //        Log.e(TAG, "i am on patch onCreate");
+        mCloudGameApi = new CloudGameApi(this);
+    }
+
+    private void initView() {
+        setContentView(R.layout.activity_main);
+        mGameView = findViewById(R.id.game_view);
 
         mTvMessage = findViewById(R.id.tv_message);
-
-        askForRequiredPermissions();
 
         Button loadPatchButton = (Button) findViewById(R.id.loadPatch);
 
@@ -118,6 +186,19 @@ public class MainActivity extends AppCompatActivity {
                 showInfo(MainActivity.this);
             }
         });
+
+        Button startCloudGameButton = findViewById(R.id.startCloudGame);
+
+        startCloudGameButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Log.d(TAG, "onClick: ");
+                if (mClientSession != null) {
+                    startGame(mClientSession);
+                }
+            }
+        });
+
     }
 
     private void askForRequiredPermissions() {
@@ -204,4 +285,96 @@ public class MainActivity extends AppCompatActivity {
         super.onPause();
         Utils.setBackground(true);
     }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.d(TAG, "onDestroy: ");
+        mCloudGameApi.stopGame(Constant.MOBILE_GAME_CODE);
+    }
+
+
+    /**
+     * 开始请求业务后台启动游戏，获取服务端server session
+     *
+     * 注意：客户在接入时需要请求自己的业务后台，获取ServerSession
+     * 业务后台实现请参考API：https://cloud.tencent.com/document/product/1162/40740
+     *
+     * @param clientSession sdk初始化成功后返回的client session
+     */
+    protected void startGame(String clientSession) {
+        Log.i(TAG, "start game");
+        // 通过业务后台来启动游戏
+        mCloudGameApi.startGame(Constant.MOBILE_GAME_CODE, clientSession, new CloudGameApi.IServerSessionListener() {
+            @Override
+            public void onSuccess(ServerResponse resp) {
+                Log.d(TAG, "onSuccess: " + resp.toString());
+                if (resp.code == 0) {
+                    //　请求成功，从服务端获取到server session，启动游戏
+                    mSDK.start(resp.serverSession);
+                } else {
+                    Toast.makeText(MainActivity.this, resp.toString(), Toast.LENGTH_LONG).show();
+                }
+            }
+
+            @Override
+            public void onFailed(String msg) {
+                Log.i(TAG, msg);
+            }
+        });
+    }
+
+    /**
+     * TcgSdk生命周期回调
+     */
+    private final ITcgMobileListener mTcgLifeCycleImpl = new ITcgMobileListener() {
+        @Override
+        public void onConnectionTimeout() {
+            // 云游戏连接超时, 用户无法使用, 只能退出
+            Log.e(TAG, "onConnectionTimeout");
+        }
+
+        @Override
+        public void onInitSuccess(String clientSession) {
+            // 初始化成功，在此处请求业务后台
+            Log.d(TAG, "onInitSuccess: ");
+            Toast.makeText(MainActivity.this, "onInitSuccess", Toast.LENGTH_LONG).show();
+            mClientSession = clientSession;
+        }
+
+        @Override
+        public void onInitFailure(int errorCode) {
+            // 初始化失败, 用户无法使用, 只能退出
+            Log.e(TAG, String.format(Locale.ENGLISH, "onInitFailure:%d", errorCode));
+        }
+
+        @Override
+        public void onConnectionFailure(int errorCode, String errorMsg) {
+            // 云游戏连接失败
+            Log.e(TAG, String.format(Locale.ENGLISH, "onConnectionFailure:%d %s", errorCode, errorMsg));
+        }
+
+        @Override
+        public void onConnectionSuccess() {
+            // 云游戏连接成功, 所有SDK的设置必须在这个回调之后进行
+            Log.d(TAG, "onConnectionSuccess: ");
+        }
+
+        @Override
+        public void onDrawFirstFrame() {
+            // 游戏画面首帧回调
+            Log.d(TAG, "onDrawFirstFrame: ");
+        }
+
+        @Override
+        public void onConfigurationChanged(Configuration newConfig) {
+            // 云端屏幕旋转时, 客户端需要同步旋转屏幕并固定下来
+            Log.e(TAG, "onConfigurationChanged:" + newConfig);
+            if (newConfig.orientation == Configuration.ORIENTATION_PORTRAIT) {
+                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+            } else {
+                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+            }
+        }
+    };
 }
