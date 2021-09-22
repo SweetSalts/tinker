@@ -16,6 +16,7 @@
 
 package tinker.sample.android.service;
 
+import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
 import android.widget.Toast;
@@ -49,17 +50,21 @@ public class SampleResultService extends DefaultTinkerResultService {
         //first, we want to kill the recover process
         TinkerServiceInternals.killTinkerPatchServiceProcess(getApplicationContext());
 
-        Handler handler = new Handler(Looper.getMainLooper());
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (result.isSuccess) {
-                    Toast.makeText(getApplicationContext(), "patch success, please restart process", Toast.LENGTH_LONG).show();
-                } else {
-                    Toast.makeText(getApplicationContext(), "patch fail, please check reason", Toast.LENGTH_LONG).show();
-                }
-            }
-        });
+        Intent intent = new Intent("com.tinker.patch.LOADRESULT");
+        intent.putExtra("result", result.isSuccess);
+        sendBroadcast(intent);
+
+//        Handler handler = new Handler(Looper.getMainLooper());
+//        handler.post(new Runnable() {
+//            @Override
+//            public void run() {
+//                if (result.isSuccess) {
+//                    Toast.makeText(getApplicationContext(), "patch加载成功，请重启应用！", Toast.LENGTH_LONG).show();
+//                } else {
+//                    Toast.makeText(getApplicationContext(), "patch fail, please check reason", Toast.LENGTH_LONG).show();
+//                }
+//            }
+//        });
         // is success and newPatch, it is nice to delete the raw file, and restart at once
         // for old patch, you can't delete the patch file
         if (result.isSuccess) {
