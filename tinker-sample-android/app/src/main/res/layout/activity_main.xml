@@ -1,84 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-                xmlns:tools="http://schemas.android.com/tools"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                tools:context=".app.MainActivity">
-
-    <TextView
-        android:id="@+id/tv_message"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentLeft="true"
-        android:visibility="gone" />
-
-    <Button
-        android:id="@+id/loadPatch"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:layout_below="@+id/tv_message"
-        android:text="load patch"/>
-
-    <Button
-        android:id="@+id/loadLibrary"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:layout_below="@+id/loadPatch"
-        android:visibility="gone"
-        android:text="load library"/>
-
-    <Button
-        android:id="@+id/cleanPatch"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:layout_below="@+id/loadLibrary"
-        android:text="clean patch"/>
-    <Button
-        android:id="@+id/killSelf"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:layout_below="@+id/cleanPatch"
-        android:text="kill self"/>
-    <Button
-        android:id="@+id/showInfo"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:layout_below="@+id/killSelf"
-        android:text="show info"/>
-    <Button
-            android:id="@+id/startCloudGame"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentRight="true"
-            android:layout_alignParentEnd="true"
-            android:text="start cloud game"/>
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:context=".app.MainActivity">
 
     <Button
             android:id="@+id/startLocalGame"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentRight="true"
-            android:layout_alignParentEnd="true"
-            android:layout_below="@+id/startCloudGame"
-            android:text="start local game"/>
+            android:layout_centerInParent="true"
+            android:text="打开本地游戏" />
 
     <com.tencent.tcgsdk.api.mobile.MobileSurfaceView
             android:id="@+id/game_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:visibility="gone"
-            />
+            android:visibility="gone" />
 
     <ImageView
             android:id="@+id/background_image"
@@ -89,12 +27,11 @@
     <FrameLayout
             android:id="@+id/fragment_container"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" >
-    </FrameLayout>
+            android:layout_height="match_parent"/>
 
     <RelativeLayout
             android:id="@+id/popup_container"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" >
-    </RelativeLayout>
+            android:layout_height="match_parent"/>
+
 </RelativeLayout>

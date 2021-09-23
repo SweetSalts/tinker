@@ -55,6 +55,7 @@ import com.tencent.tinker.lib.tinker.TinkerInstaller;
 import com.tencent.tinker.loader.shareutil.ShareConstants;
 import com.tencent.tinker.loader.shareutil.ShareTinkerInternals;
 
+import java.io.File;
 import java.util.Locale;
 import tinker.sample.android.Constant;
 import tinker.sample.android.R;
@@ -74,15 +75,7 @@ import tinker.sample.android.util.Utils;
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "Tinker.MainActivity";
 
-    private TextView mTvMessage;
     private ImageView mBackgroundImage;
-
-    private Button loadPatchButton;
-    private Button loadLibraryButton;
-    private Button cleanPatchButton;
-    private Button killSelfButton;
-    private Button buildInfoButton;
-    private Button startCloudGameButton;
     private Button startLocalGameButton;
 
     // 手游视图
@@ -93,6 +86,8 @@ public class MainActivity extends AppCompatActivity {
     private CloudGameApi mCloudGameApi;
     // 从手游SDK获取的客户端session
     private String mClientSession;
+
+    private String mSavedPatchPath;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -110,14 +105,6 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "onResume: ");
         super.onResume();
         Utils.setBackground(false);
-
-        if (hasRequiredPermissions()) {
-            mTvMessage.setVisibility(View.GONE);
-        } else {
-            mTvMessage.setText(R.string.msg_no_permissions);
-            mTvMessage.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
-            mTvMessage.setVisibility(View.VISIBLE);
-        }
     }
 
     @Override
@@ -133,6 +120,7 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         Shared.engine.stop();
         mCloudGameApi.stopGame(Constant.MOBILE_GAME_CODE);
+        mSavedPatchPath = getExternalCacheDir() + File.separator + "game.patch";
     }
 
     @Override
@@ -170,81 +158,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mGameView = findViewById(R.id.game_view);
-        mTvMessage = findViewById(R.id.tv_message);
         mBackgroundImage = (ImageView) findViewById(R.id.background_image);
-
-        // 加载patch，默认路径/storage/sdcard0/patch_signed_7zip.apk
-        loadPatchButton = (Button) findViewById(R.id.loadPatch);
-        loadPatchButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                TinkerInstaller.onReceiveUpgradePatch(getApplicationContext(),
-                        Environment.getExternalStorageDirectory().getAbsolutePath()
-                                + "/patch_signed_7zip.apk");
-            }
-        });
-
-        // 加载so
-        loadLibraryButton = findViewById(R.id.loadLibrary);
-        loadLibraryButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // #method 1, hack classloader library path
-                TinkerLoadLibrary.installNavitveLibraryABI(getApplicationContext(), "armeabi");
-                System.loadLibrary("stlport_shared");
-
-                // #method 2, for lib/armeabi, just use TinkerInstaller.loadLibrary
-                //TinkerLoadLibrary.loadArmLibrary(getApplicationContext(), "stlport_shared");
-
-                // #method 3, load tinker patch library directly
-                //TinkerInstaller.loadLibraryFromTinker(getApplicationContext(), "assets/x86", "stlport_shared");
-
-            }
-        });
-
-        // 清除patch
-        cleanPatchButton = findViewById(R.id.cleanPatch);
-        cleanPatchButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Tinker.with(getApplicationContext()).cleanPatch();
-            }
-        });
-
-        // 自杀
-        killSelfButton = findViewById(R.id.killSelf);
-        killSelfButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ShareTinkerInternals.killAllOtherProcess(getApplicationContext());
-                android.os.Process.killProcess(android.os.Process.myPid());
-            }
-        });
-
-        // 展示加载信息
-        buildInfoButton = findViewById(R.id.showInfo);
-        buildInfoButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showInfo(MainActivity.this);
-            }
-        });
-
-        // 开启云游戏
-        startCloudGameButton = findViewById(R.id.startCloudGame);
-        startCloudGameButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Log.d(TAG, "onClick: ");
-
-                if (mClientSession != null) {
-                    mGameView.setVisibility(View.VISIBLE);
-                    startCloudGameButton.setVisibility(View.GONE);
-                    startCloudGame(mClientSession);
-                }
-            }
-        });
-
         // 开启本地游戏
         startLocalGameButton = findViewById(R.id.startLocalGame);
         startLocalGameButton.setOnClickListener(new OnClickListener() {
@@ -253,7 +167,6 @@ public class MainActivity extends AppCompatActivity {
                 mGameView.setVisibility(View.GONE);
                 mCloudGameApi.stopGame(Constant.MOBILE_GAME_CODE);
                 startLocalGameButton.setVisibility(View.GONE);
-                startCloudGameButton.setVisibility(View.GONE);
                 startLocalGame();
             }
         });
@@ -279,49 +192,6 @@ public class MainActivity extends AppCompatActivity {
 
         // 让画面和视图一样大,画面可能被拉伸
         mGameView.setScaleType(ScaleType.ASPECT_FILL);
-    }
-
-    public boolean showInfo(Context context) {
-        Log.d(TAG, "showInfo: ");
-        // add more Build Info
-        final StringBuilder sb = new StringBuilder();
-        Tinker tinker = Tinker.with(getApplicationContext());
-        if (tinker.isTinkerLoaded()) {
-            sb.append(String.format("[patch is loaded] \n"));
-            sb.append(String.format("[buildConfig TINKER_ID] %s \n", BuildInfo.TINKER_ID));
-            sb.append(String.format("[buildConfig BASE_TINKER_ID] %s \n", BaseBuildInfo.BASE_TINKER_ID));
-
-            sb.append(String.format("[buildConfig MESSSAGE] %s \n", BuildInfo.MESSAGE));
-            sb.append(String.format("[TINKER_ID] %s \n", tinker.getTinkerLoadResultIfPresent().getPackageConfigByName(ShareConstants.TINKER_ID)));
-            sb.append(String.format("[packageConfig patchMessage] %s \n", tinker.getTinkerLoadResultIfPresent().getPackageConfigByName("patchMessage")));
-            sb.append(String.format("[TINKER_ID Rom Space] %d k \n", tinker.getTinkerRomSpace()));
-
-        } else {
-            sb.append(String.format("[patch is not loaded] \n"));
-            sb.append(String.format("[buildConfig TINKER_ID] %s \n", BuildInfo.TINKER_ID));
-            sb.append(String.format("[buildConfig BASE_TINKER_ID] %s \n", BaseBuildInfo.BASE_TINKER_ID));
-
-            sb.append(String.format("[buildConfig MESSSAGE] %s \n", BuildInfo.MESSAGE));
-            sb.append(String.format("[TINKER_ID] %s \n", ShareTinkerInternals.getManifestTinkerID(getApplicationContext())));
-        }
-        sb.append(String.format("[BaseBuildInfo Message] %s \n", BaseBuildInfo.TEST_MESSAGE));
-
-        final TextView v = new TextView(context);
-        v.setText(sb);
-        v.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
-        v.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 10);
-        v.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        v.setTextColor(0xFF000000);
-        v.setTypeface(Typeface.MONOSPACE);
-        final int padding = 16;
-        v.setPadding(padding, padding, padding, padding);
-
-        final AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setCancelable(true);
-        builder.setView(v);
-        final AlertDialog alert = builder.create();
-        alert.show();
-        return true;
     }
 
     private void askForRequiredPermissions() {
@@ -353,7 +223,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void startLocalGame() {
         Log.d(TAG, "startLocalGame: ");
-
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         Shared.activity = this;
         Shared.engine.start();
         Shared.engine.setBackgroundImageView(mBackgroundImage);
@@ -408,7 +278,6 @@ public class MainActivity extends AppCompatActivity {
         public void onInitSuccess(String clientSession) {
             // 初始化成功，在此处请求业务后台
             Log.d(TAG, "onInitSuccess: ");
-            Toast.makeText(MainActivity.this, "onInitSuccess", Toast.LENGTH_LONG).show();
             mClientSession = clientSession;
         }
 
