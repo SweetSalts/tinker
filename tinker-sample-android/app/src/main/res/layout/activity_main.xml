@@ -29,6 +29,7 @@
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
         android:layout_below="@+id/loadPatch"
+        android:visibility="gone"
         android:text="load library"/>
 
     <Button
@@ -70,13 +71,13 @@
             android:layout_alignParentRight="true"
             android:layout_alignParentEnd="true"
             android:layout_below="@+id/startCloudGame"
-            android:visibility="gone"
             android:text="start local game"/>
 
     <com.tencent.tcgsdk.api.mobile.MobileSurfaceView
             android:id="@+id/game_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:visibility="gone"
             />
 
     <ImageView

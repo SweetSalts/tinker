@@ -75,10 +75,15 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "Tinker.MainActivity";
 
     private TextView mTvMessage;
-
     private ImageView mBackgroundImage;
 
-    private String mClientSession;
+    private Button loadPatchButton;
+    private Button loadLibraryButton;
+    private Button cleanPatchButton;
+    private Button killSelfButton;
+    private Button buildInfoButton;
+    private Button startCloudGameButton;
+    private Button startLocalGameButton;
 
     // 手游视图
     private MobileSurfaceView mGameView;
@@ -86,53 +91,176 @@ public class MainActivity extends AppCompatActivity {
     private IMobileTcgSdk mSDK;
     // 业务后台交互的API
     private CloudGameApi mCloudGameApi;
+    // 从手游SDK获取的客户端session
+    private String mClientSession;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.d(TAG, "onCreate: ");
         super.onCreate(savedInstanceState);
         init();
         initWindow();
         initView();
         initSdk();
         askForRequiredPermissions();
-
-        initLocalGamePatch();
     }
 
-    private void initLocalGamePatch() {
-        initGameView();
+    @Override
+    protected void onResume() {
+        Log.d(TAG, "onResume: ");
+        super.onResume();
+        Utils.setBackground(false);
+
+        if (hasRequiredPermissions()) {
+            mTvMessage.setVisibility(View.GONE);
+        } else {
+            mTvMessage.setText(R.string.msg_no_permissions);
+            mTvMessage.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+            mTvMessage.setVisibility(View.VISIBLE);
+        }
     }
 
-    private void initGame() {
-        Log.d(TAG, "initGame: ");
-
-        Shared.activity = this;
-        Shared.engine.start();
-        Shared.engine.setBackgroundImageView(mBackgroundImage);
-        // set background
-        setBackgroundImage();
-
-        // set menu
-        ScreenController.getInstance().openScreen(Screen.MENU);
+    @Override
+    protected void onPause() {
+        Log.d(TAG, "onPause: ");
+        super.onPause();
+        Utils.setBackground(true);
     }
 
-    private void initGameView() {
-        Log.d(TAG, "initGameView: ");
+    @Override
+    protected void onDestroy() {
+        Log.d(TAG, "onDestroy: ");
+        super.onDestroy();
+        Shared.engine.stop();
+        mCloudGameApi.stopGame(Constant.MOBILE_GAME_CODE);
+    }
 
+    @Override
+    public void onBackPressed() {
+        if (PopupManager.isShown()) {
+            PopupManager.closePopup();
+            if (ScreenController.getLastScreen() == Screen.GAME) {
+                Shared.eventBus.notify(new BackGameEvent());
+            }
+        } else if (ScreenController.getInstance().onBack()) {
+            super.onBackPressed();
+        }
+    }
+
+    private void init() {
+        Log.d(TAG, "init: ");
+        // 云游业务后台api
+        mCloudGameApi = new CloudGameApi(this);
+        // 本地游戏字体库
+        FontLoader.loadFonts(this);
+        // 本地游戏相关
+        Shared.context = getApplicationContext();
+        Shared.engine = Engine.getInstance();
+        Shared.eventBus = EventBus.getInstance();
+    }
+
+    private void initWindow() {
+        Log.d(TAG, "initWindow: ");
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
+    }
+
+    private void initView() {
+        Log.d(TAG, "initView: ");
+        setContentView(R.layout.activity_main);
+
+        mGameView = findViewById(R.id.game_view);
+        mTvMessage = findViewById(R.id.tv_message);
         mBackgroundImage = (ImageView) findViewById(R.id.background_image);
 
-        Button startLocalGameButton = findViewById(R.id.startLocalGame);
-        startLocalGameButton.setVisibility(View.VISIBLE);
-        startLocalGameButton.setOnClickListener(new OnClickListener() {
+        // 加载patch，默认路径/storage/sdcard0/patch_signed_7zip.apk
+        loadPatchButton = (Button) findViewById(R.id.loadPatch);
+        loadPatchButton.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
-                initGame();
+            public void onClick(View v) {
+                TinkerInstaller.onReceiveUpgradePatch(getApplicationContext(),
+                        Environment.getExternalStorageDirectory().getAbsolutePath()
+                                + "/patch_signed_7zip.apk");
             }
         });
 
+        // 加载so
+        loadLibraryButton = findViewById(R.id.loadLibrary);
+        loadLibraryButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // #method 1, hack classloader library path
+                TinkerLoadLibrary.installNavitveLibraryABI(getApplicationContext(), "armeabi");
+                System.loadLibrary("stlport_shared");
+
+                // #method 2, for lib/armeabi, just use TinkerInstaller.loadLibrary
+                //TinkerLoadLibrary.loadArmLibrary(getApplicationContext(), "stlport_shared");
+
+                // #method 3, load tinker patch library directly
+                //TinkerInstaller.loadLibraryFromTinker(getApplicationContext(), "assets/x86", "stlport_shared");
+
+            }
+        });
+
+        // 清除patch
+        cleanPatchButton = findViewById(R.id.cleanPatch);
+        cleanPatchButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Tinker.with(getApplicationContext()).cleanPatch();
+            }
+        });
+
+        // 自杀
+        killSelfButton = findViewById(R.id.killSelf);
+        killSelfButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ShareTinkerInternals.killAllOtherProcess(getApplicationContext());
+                android.os.Process.killProcess(android.os.Process.myPid());
+            }
+        });
+
+        // 展示加载信息
+        buildInfoButton = findViewById(R.id.showInfo);
+        buildInfoButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showInfo(MainActivity.this);
+            }
+        });
+
+        // 开启云游戏
+        startCloudGameButton = findViewById(R.id.startCloudGame);
+        startCloudGameButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Log.d(TAG, "onClick: ");
+
+                if (mClientSession != null) {
+                    mGameView.setVisibility(View.VISIBLE);
+                    startCloudGameButton.setVisibility(View.GONE);
+                    startCloudGame(mClientSession);
+                }
+            }
+        });
+
+        // 开启本地游戏
+        startLocalGameButton = findViewById(R.id.startLocalGame);
+        startLocalGameButton.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mGameView.setVisibility(View.GONE);
+                mCloudGameApi.stopGame(Constant.MOBILE_GAME_CODE);
+                startLocalGameButton.setVisibility(View.GONE);
+                startCloudGameButton.setVisibility(View.GONE);
+                startLocalGame();
+            }
+        });
     }
 
     private void initSdk() {
+        Log.d(TAG, "initSdk: ");
         // 创建Builder
         MobileTcgSdk.Builder builder = new MobileTcgSdk.Builder(
                 this,
@@ -153,121 +281,8 @@ public class MainActivity extends AppCompatActivity {
         mGameView.setScaleType(ScaleType.ASPECT_FILL);
     }
 
-    private void initWindow() {
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
-    }
-
-    private void init() {
-        boolean isARKHotRunning = ShareTinkerInternals.isArkHotRuning();
-        Log.e(TAG, "ARK HOT Running status = " + isARKHotRunning);
-        Log.e(TAG, "i am on onCreate classloader:" + MainActivity.class.getClassLoader().toString());
-        //test resource change
-        Log.e(TAG, "i am on onCreate string:" + getResources().getString(R.string.test_resource));
-        Log.e(TAG, "i am on patch onCreate");
-        mCloudGameApi = new CloudGameApi(this);
-        FontLoader.loadFonts(this);
-        Shared.context = getApplicationContext();
-        Shared.engine = Engine.getInstance();
-        Shared.eventBus = EventBus.getInstance();
-    }
-
-    private void initView() {
-        setContentView(R.layout.activity_main);
-        mGameView = findViewById(R.id.game_view);
-
-        mTvMessage = findViewById(R.id.tv_message);
-
-        Button loadPatchButton = (Button) findViewById(R.id.loadPatch);
-
-        loadPatchButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                TinkerInstaller.onReceiveUpgradePatch(getApplicationContext(), Environment.getExternalStorageDirectory().getAbsolutePath() + "/patch_signed_7zip.apk");
-            }
-        });
-
-        Button loadLibraryButton = (Button) findViewById(R.id.loadLibrary);
-
-        loadLibraryButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // #method 1, hack classloader library path
-                TinkerLoadLibrary.installNavitveLibraryABI(getApplicationContext(), "armeabi");
-                System.loadLibrary("stlport_shared");
-
-                // #method 2, for lib/armeabi, just use TinkerInstaller.loadLibrary
-//                TinkerLoadLibrary.loadArmLibrary(getApplicationContext(), "stlport_shared");
-
-                // #method 3, load tinker patch library directly
-//                TinkerInstaller.loadLibraryFromTinker(getApplicationContext(), "assets/x86", "stlport_shared");
-
-            }
-        });
-
-        Button cleanPatchButton = (Button) findViewById(R.id.cleanPatch);
-
-        cleanPatchButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Tinker.with(getApplicationContext()).cleanPatch();
-            }
-        });
-
-        Button killSelfButton = (Button) findViewById(R.id.killSelf);
-
-        killSelfButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ShareTinkerInternals.killAllOtherProcess(getApplicationContext());
-                android.os.Process.killProcess(android.os.Process.myPid());
-            }
-        });
-
-        Button buildInfoButton = (Button) findViewById(R.id.showInfo);
-
-        buildInfoButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showInfo(MainActivity.this);
-            }
-        });
-
-        Button startCloudGameButton = findViewById(R.id.startCloudGame);
-
-        startCloudGameButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Log.d(TAG, "onClick: ");
-                if (mClientSession != null) {
-                    startGame(mClientSession);
-                }
-            }
-        });
-
-    }
-
-    private void askForRequiredPermissions() {
-        if (Build.VERSION.SDK_INT < 23) {
-            return;
-        }
-        if (!hasRequiredPermissions()) {
-            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.READ_EXTERNAL_STORAGE}, 0);
-        }
-    }
-
-    private boolean hasRequiredPermissions() {
-        if (Build.VERSION.SDK_INT >= 16) {
-            final int res = ContextCompat.checkSelfPermission(this.getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE);
-            return res == PackageManager.PERMISSION_GRANTED;
-        } else {
-            // When SDK_INT is below 16, READ_EXTERNAL_STORAGE will also be granted if WRITE_EXTERNAL_STORAGE is granted.
-            final int res = ContextCompat.checkSelfPermission(this.getApplicationContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE);
-            return res == PackageManager.PERMISSION_GRANTED;
-        }
-    }
-
     public boolean showInfo(Context context) {
+        Log.d(TAG, "showInfo: ");
         // add more Build Info
         final StringBuilder sb = new StringBuilder();
         Tinker tinker = Tinker.with(getApplicationContext());
@@ -309,46 +324,23 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    @Override
-    protected void onResume() {
-        Log.e(TAG, "i am on onResume");
-//        Log.e(TAG, "i am on patch onResume");
-
-        super.onResume();
-        Utils.setBackground(false);
-
-        if (hasRequiredPermissions()) {
-            mTvMessage.setVisibility(View.GONE);
-        } else {
-            mTvMessage.setText(R.string.msg_no_permissions);
-            mTvMessage.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
-            mTvMessage.setVisibility(View.VISIBLE);
+    private void askForRequiredPermissions() {
+        if (Build.VERSION.SDK_INT < 23) {
+            return;
+        }
+        if (!hasRequiredPermissions()) {
+            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.READ_EXTERNAL_STORAGE}, 0);
         }
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        Utils.setBackground(true);
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        Shared.engine.stop();
-        Log.d(TAG, "onDestroy: ");
-        mCloudGameApi.stopGame(Constant.MOBILE_GAME_CODE);
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (PopupManager.isShown()) {
-            PopupManager.closePopup();
-            if (ScreenController.getLastScreen() == Screen.GAME) {
-                Shared.eventBus.notify(new BackGameEvent());
-            }
-        } else if (ScreenController.getInstance().onBack()) {
-            super.onBackPressed();
+    private boolean hasRequiredPermissions() {
+        if (Build.VERSION.SDK_INT >= 16) {
+            final int res = ContextCompat.checkSelfPermission(this.getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE);
+            return res == PackageManager.PERMISSION_GRANTED;
+        } else {
+            // When SDK_INT is below 16, READ_EXTERNAL_STORAGE will also be granted if WRITE_EXTERNAL_STORAGE is granted.
+            final int res = ContextCompat.checkSelfPermission(this.getApplicationContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            return res == PackageManager.PERMISSION_GRANTED;
         }
     }
 
@@ -359,6 +351,19 @@ public class MainActivity extends AppCompatActivity {
         mBackgroundImage.setImageBitmap(bitmap);
     }
 
+    private void startLocalGame() {
+        Log.d(TAG, "startLocalGame: ");
+
+        Shared.activity = this;
+        Shared.engine.start();
+        Shared.engine.setBackgroundImageView(mBackgroundImage);
+        // set background
+        setBackgroundImage();
+
+        // set menu
+        ScreenController.getInstance().openScreen(Screen.MENU);
+    }
+
     /**
      * 开始请求业务后台启动游戏，获取服务端server session
      *
@@ -367,8 +372,8 @@ public class MainActivity extends AppCompatActivity {
      *
      * @param clientSession sdk初始化成功后返回的client session
      */
-    protected void startGame(String clientSession) {
-        Log.i(TAG, "start game");
+    protected void startCloudGame(String clientSession) {
+        Log.i(TAG, "startCloudGame");
         // 通过业务后台来启动游戏
         mCloudGameApi.startGame(Constant.MOBILE_GAME_CODE, clientSession, new CloudGameApi.IServerSessionListener() {
             @Override
