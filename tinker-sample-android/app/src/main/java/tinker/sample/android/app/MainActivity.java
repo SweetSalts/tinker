@@ -76,7 +76,6 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "Tinker.MainActivity";
 
     private ImageView mBackgroundImage;
-    private Button startLocalGameButton;
 
     // 手游视图
     private MobileSurfaceView mGameView;
@@ -158,18 +157,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mGameView = findViewById(R.id.game_view);
-        mBackgroundImage = (ImageView) findViewById(R.id.background_image);
-        // 开启本地游戏
-        startLocalGameButton = findViewById(R.id.startLocalGame);
-        startLocalGameButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mGameView.setVisibility(View.GONE);
-                mCloudGameApi.stopGame(Constant.MOBILE_GAME_CODE);
-                startLocalGameButton.setVisibility(View.GONE);
-                startLocalGame();
-            }
-        });
+        mBackgroundImage = findViewById(R.id.background_image);
+        startLocalGame();
     }
 
     private void initSdk() {
@@ -223,7 +212,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void startLocalGame() {
         Log.d(TAG, "startLocalGame: ");
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        Toast.makeText(this, "打开本地游戏", Toast.LENGTH_SHORT).show();
         Shared.activity = this;
         Shared.engine.start();
         Shared.engine.setBackgroundImageView(mBackgroundImage);

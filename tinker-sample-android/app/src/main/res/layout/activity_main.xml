@@ -5,13 +5,6 @@
         android:layout_height="match_parent"
         tools:context=".app.MainActivity">
 
-    <Button
-            android:id="@+id/startLocalGame"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
-            android:text="打开本地游戏" />
-
     <com.tencent.tcgsdk.api.mobile.MobileSurfaceView
             android:id="@+id/game_view"
             android:layout_width="match_parent"
