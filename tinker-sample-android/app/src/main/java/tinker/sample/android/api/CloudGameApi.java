@@ -33,7 +33,7 @@ public class CloudGameApi {
     private final static String TAG = "CloudGameApi";
 
     // 业务后台地址
-    public static final String SERVER = "service-rrtd3fce-1304469412.gz.apigw.tencentcs.com/release";
+    public static final String SERVER = "service-1h6pvu3s-1307389160.gz.apigw.tencentcs.com/release";
     public static final String CREATE_GAME_SESSION = "/StartCloudGame";
     public static final String STOP_GAME_SESSION = "/StopCloudGame";
 
@@ -123,8 +123,8 @@ public class CloudGameApi {
     /**
      * 请求业务后台，停止游戏(释放云端实例)
      */
-    public void stopGame(String gameId) {
-        String bodyString = mGson.toJson(new GameStopParam(gameId, mUserID));
+    public void stopGame() {
+        String bodyString = mGson.toJson(new GameStopParam(mUserID));
         Log.d(TAG, "stopGame bodyString: " + bodyString);
         JSONObject request = null;
         try {

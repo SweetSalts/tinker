@@ -38,6 +38,8 @@ public class FloatingSettingBarView {
          */
         void onInteractiveGame();
 
+        void onExit();
+
     }
 
     /**
@@ -48,10 +50,15 @@ public class FloatingSettingBarView {
         private final View arrowHolder;
         private final ImageView arrow;
         private final View splitLine;
+        private final View splitLine2;
         private final View interactiveGameHolder;
+        private final View restartHolder;
         private final ImageView interactiveGameIcon;
+        private final ImageView restartIcon;
         private final TextView interactiveGameText;
+        private final TextView restartText;
         private final View rightPadding;
+        private final View rightPadding2;
         private boolean isExpand = false;
         private View rootView;
         private SettingEventListener eventListener;
@@ -66,12 +73,19 @@ public class FloatingSettingBarView {
             });
 
             splitLine = parent.findViewById(R.id.floating_setting_left_line);
+            splitLine2 = parent.findViewById(R.id.floating_setting_left_line_2);
 
             interactiveGameHolder = parent.findViewById(R.id.floating_setting_interactive_game_holder);
+            restartHolder = parent.findViewById(R.id.floating_setting_restart_holder);
+
             interactiveGameIcon = parent.findViewById(R.id.floating_setting_interactive_game_icon);
+            restartIcon = parent.findViewById(R.id.floating_setting_restart_icon);
+
             interactiveGameText = parent.findViewById(R.id.floating_setting_interactive_game_text);
+            restartText = parent.findViewById(R.id.floating_setting_restart_text);
 
             rightPadding = parent.findViewById(R.id.floating_setting_left_right_padding_2);
+            rightPadding2 = parent.findViewById(R.id.floating_setting_left_right_padding_3);
 
             setExpand(isExpand);
         }
@@ -85,6 +99,16 @@ public class FloatingSettingBarView {
                     eventListener.onInteractiveGame();
                 }
             });
+
+            restartHolder.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Log.i(TAG, "exit onClick");
+                    if (eventListener != null) {
+                        eventListener.onExit();
+                    }
+                }
+            });
         }
 
         public View getRootView() {
@@ -96,9 +120,10 @@ public class FloatingSettingBarView {
          */
         private void setExpand(boolean expand) {
             View[] views = {
-                    splitLine,
+                    splitLine, splitLine2,
                     interactiveGameHolder, interactiveGameIcon, interactiveGameText,
-                    rightPadding,
+                    restartHolder, restartIcon, restartText,
+                    rightPadding, rightPadding2
             };
 
             if (expand) {

@@ -17,16 +17,6 @@
             app:layout_constraintTop_toTopOf="parent"
             />
 
-    <Button
-            android:id="@+id/startCloudGame"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            android:text="打开云游戏" />
-
     <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/game_setting"
             android:layout_width="0dp"
@@ -130,12 +120,70 @@
                     app:layout_constraintDimensionRatio="1:1" />
 
             <View
+                    android:id="@+id/floating_setting_left_right_padding_3"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintDimensionRatio="20:60"
+                    app:layout_constraintStart_toEndOf="@id/floating_setting_left_line_2"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+            <View
+                    android:id="@+id/floating_setting_left_line_2"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:background="#466280"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintDimensionRatio="1:45"
+                    app:layout_constraintHeight_percent="0.75"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toEndOf="@+id/floating_setting_interactive_game_holder"
+                    android:layout_marginLeft="14dp"
+                    android:layout_marginStart="14dp" />
+
+            <View
+                    android:id="@+id/floating_setting_restart_holder"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    app:layout_constraintDimensionRatio="48:45"
+                    app:layout_constraintStart_toEndOf="@+id/floating_setting_left_right_padding_3"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintHeight_percent="0.75" />
+
+            <TextView
+                    android:id="@+id/floating_setting_restart_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="0dp"
+                    android:text="退出游戏"
+                    app:layout_constraintTop_toBottomOf="@+id/floating_setting_restart_icon"
+                    app:layout_constraintBottom_toBottomOf="@+id/floating_setting_restart_holder"
+                    app:layout_constraintEnd_toEndOf="@id/floating_setting_restart_holder"
+                    app:layout_constraintStart_toStartOf="@id/floating_setting_restart_holder"
+                    android:textColor="#F4F4F4"
+                    app:autoSizeTextType="uniform"
+                    app:autoSizeMinTextSize="5sp"
+                    android:gravity="center" />
+
+            <ImageView
+                    android:id="@+id/floating_setting_restart_icon"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:src="@drawable/ic_menu_revert"
+                    app:layout_constraintEnd_toEndOf="@+id/floating_setting_restart_text"
+                    app:layout_constraintStart_toStartOf="@+id/floating_setting_restart_text"
+                    app:layout_constraintTop_toTopOf="@+id/floating_setting_restart_holder"
+                    app:layout_constraintHeight_percent="0.45"
+                    app:layout_constraintDimensionRatio="1:1"
+                    app:srcCompat="@android:drawable/ic_menu_revert" />
+
+            <View
                     android:id="@+id/floating_setting_left_right_padding_2"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintDimensionRatio="36:60"
-                    app:layout_constraintStart_toEndOf="@id/floating_setting_interactive_game_holder"
+                    app:layout_constraintStart_toEndOf="@id/floating_setting_restart_holder"
                     app:layout_constraintTop_toTopOf="parent" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>

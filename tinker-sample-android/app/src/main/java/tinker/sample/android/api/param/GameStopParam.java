@@ -8,17 +8,13 @@ import com.google.gson.annotations.SerializedName;
  * 业务后台API文档：https://cloud.tencent.com/document/product/1162/40739
  */
 public class GameStopParam {
-    @SerializedName("GameID")
-    public String gameId;
     @SerializedName("UserId")
     public String userId;
 
     /**
-     * @param gameId 游戏体验码
      * @param userId 用户id
      */
-    public GameStopParam(String gameId, String userId) {
-        this.gameId = gameId;
+    public GameStopParam(String userId) {
         this.userId = userId;
     }
 }

@@ -24,7 +24,6 @@ import android.os.Build;
 import android.util.Log;
 import androidx.multidex.MultiDex;
 
-import com.liulishuo.filedownloader.FileDownloadListener;
 import com.tencent.tinker.anno.DefaultLifeCycle;
 import com.tencent.tinker.entry.ApplicationLifeCycle;
 import com.tencent.tinker.entry.DefaultApplicationLike;

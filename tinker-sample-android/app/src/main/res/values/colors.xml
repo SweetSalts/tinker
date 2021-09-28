@@ -5,4 +5,5 @@
     <color name="colorAccent">#FF4081</color>
     <color name="floating_setting_bar_background">#B307274A</color>
     <color name="floating_setting_bar_border">#3064B0</color>
+    <color name="translucent">#00000000</color>
 </resources>

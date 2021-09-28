@@ -27,25 +27,21 @@ import android.content.DialogInterface.OnShowListener;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
-import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
-import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
-import com.liulishuo.filedownloader.BaseDownloadTask;
-import com.liulishuo.filedownloader.FileDownloadListener;
-import com.liulishuo.filedownloader.FileDownloader;
+import com.arialyy.annotations.Download;
+import com.arialyy.aria.core.Aria;
+import com.arialyy.aria.core.task.DownloadTask;
 import com.tencent.tcgsdk.api.LogLevel;
 import com.tencent.tcgsdk.api.ScaleType;
 import com.tencent.tcgsdk.api.mobile.Configuration;
@@ -60,6 +56,7 @@ import java.io.File;
 import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
+import pub.devrel.easypermissions.EasyPermissions;
 import tinker.sample.android.Constant;
 import tinker.sample.android.R;
 import tinker.sample.android.api.CloudGameApi;
@@ -87,9 +84,8 @@ public class MainActivity extends AppCompatActivity {
     // 业务后台交互的API
     private CloudGameApi mCloudGameApi;
 
-    private String mClientSession;
     private String mSavedPatchPath;
-    private int downloadTaskId;
+    private long downloadTaskId = -1;
     private int currentTimeLeft;
     private boolean paused;
     private volatile boolean isStartDownload;
@@ -104,23 +100,29 @@ public class MainActivity extends AppCompatActivity {
     private Timer mTimer;
     private TimerTask mDownLoadTimerTask;
     private TimerTask mRestartTimerTask;
-    private double currentPercent;
+    private int currentPercent;
+    private boolean isdownloadSlience;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         Log.d(TAG, "onCreate: ");
         super.onCreate(savedInstanceState);
-        init();
         initWindow();
+        init();
+        initPermissions();
         initView();
+        initDialog();
+        initTimer();
         initSdk();
-        askForRequiredPermissions();
     }
 
     @Override
     protected void onResume() {
         Log.d(TAG, "onResume: ");
         super.onResume();
+        if (mSDK != null) {
+            mSDK.setVolume(1);
+        }
         Utils.setBackground(false);
     }
 
@@ -132,11 +134,37 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onStop() {
+        Log.d(TAG, "onStop: ");
+        super.onStop();
+        mHandler.removeMessages(RESTART_MSG);
+        if (mSDK != null) {
+            mSDK.setVolume(0);
+        }
+    }
+
+    @Override
     protected void onDestroy() {
         Log.d(TAG, "onDestroy: ");
         super.onDestroy();
         unregisterReceiver(msgReceiver);
-        mCloudGameApi.stopGame(Constant.GAME_ID);
+        mCloudGameApi.stopGame();
+        cancleTimer();
+        if (mSDK != null) {
+            mSDK.stop();
+        }
+        Aria.download(this).unRegister();
+    }
+
+    @Override
+    public void onBackPressed() {
+        Log.d(TAG, "onBackPressed: ");
+        if (mSDK == null) {
+            super.onBackPressed();
+        } else {
+            mSDK.sendKey(IMobileTcgSdk.KEY_BACK, true);
+            mSDK.sendKey(IMobileTcgSdk.KEY_BACK, false);
+        }
     }
 
     private void init() {
@@ -144,10 +172,15 @@ public class MainActivity extends AppCompatActivity {
         mCloudGameApi = new CloudGameApi(this);
         mHandler = new MyHandler();
         mSavedPatchPath = getExternalCacheDir() + File.separator + "game.patch";
-        Utils.deleteFile(mSavedPatchPath);
-        FileDownloader.setup(this);
-        initTimer();
+        Aria.download(this).register();
         initReceiver();
+    }
+
+    private void initPermissions() {
+        Log.d(TAG, "initPermissions: ");
+        EasyPermissions.requestPermissions(this, "下载安装包需要读写权限", 0,
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE);
     }
 
     private void initReceiver() {
@@ -164,6 +197,15 @@ public class MainActivity extends AppCompatActivity {
         initRestartTimer();
     }
 
+    private void cancleTimer() {
+        mDownLoadTimerTask.cancel();
+        mRestartTimerTask.cancel();
+        mTimer.cancel();
+        mDownLoadTimerTask = null;
+        mRestartTimerTask = null;
+        mTimer = null;
+    }
+
     private void initDownLoadTimer() {
         mDownLoadTimerTask = new TimerTask() {
             @Override
@@ -171,10 +213,12 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "run: time is up, start download");
                 isStartDownload = true;
                 if (!paused && !isDownloadSuccess) {
+                    isdownloadSlience = true;
                     startDownload();
                 }
             }
         };
+        mTimer.schedule(mDownLoadTimerTask, 2 * 60 * 1000);
     }
 
     private void initRestartTimer() {
@@ -201,7 +245,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         gameContainer = findViewById(R.id.tiyan_game_container);
         mGameView = new MobileSurfaceView(this);
-        mGameView.setVisibility(View.GONE);
         gameContainer.addView(mGameView);
 
         settingBarView = new FloatingSettingBarView(findViewById(R.id.game_setting));
@@ -216,27 +259,16 @@ public class MainActivity extends AppCompatActivity {
                     loadPatchProcess.show();
                 } else {
                     downloadProcess.show();
-                    downloadProcess.setProgress((int) Math.ceil(currentPercent));
                 }
+            }
+
+            @Override
+            public void onExit() {
+                Log.d(TAG, "onExit: ");
+                finish();
             }
         });
         settingBarView.setViewShow(false);
-
-        initDialog();
-
-        Button startCloudGameButton = findViewById(R.id.startCloudGame);
-        startCloudGameButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (mClientSession != null) {
-                    startCloudGame(mClientSession, Constant.GAME_ID);
-                    mTimer.schedule(mDownLoadTimerTask, 2 * 60 * 1000);
-                    mGameView.setVisibility(View.VISIBLE);
-                    settingBarView.setViewShow(true);
-                    startCloudGameButton.setVisibility(View.GONE);
-                }
-            }
-        });
     }
 
     private void initDialog() {
@@ -291,11 +323,13 @@ public class MainActivity extends AppCompatActivity {
                     public void onClick(DialogInterface dialogInterface, int i) {
                         Log.d(TAG, "onClick: pause");
                         if (paused) {
-                            startDownload();
+                            Aria.download(this).load(downloadTaskId).resume();
                             downloadProcess.getButton(DialogInterface.BUTTON_NEUTRAL).setText("暂停");
+                            paused = false;
                         } else {
-                            FileDownloader.getImpl().pause(downloadTaskId);
+                            Aria.download(this).load(downloadTaskId).stop();
                             downloadProcess.getButton(DialogInterface.BUTTON_NEUTRAL).setText("开始");
+                            paused = true;
                         }
                     }
                 });
@@ -326,7 +360,7 @@ public class MainActivity extends AppCompatActivity {
                         if (isLoadSuccess) {
                             downloadProcess.dismiss();
                             if (!isEnableRestartTimer) {
-                                mTimer.schedule(mRestartTimerTask, 20 * 1000 - 10 * 1000);
+                                mTimer.schedule(mRestartTimerTask, 5 * 60 * 1000 - 10 * 1000);
                                 isEnableRestartTimer = true;
                             }
                         }
@@ -376,28 +410,6 @@ public class MainActivity extends AppCompatActivity {
         mGameView.setScaleType(ScaleType.ASPECT_FILL);
     }
 
-    private void askForRequiredPermissions() {
-        if (Build.VERSION.SDK_INT < 23) {
-            return;
-        }
-        if (!hasRequiredPermissions()) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 0);
-        }
-    }
-
-    private boolean hasRequiredPermissions() {
-        if (Build.VERSION.SDK_INT >= 16) {
-            final int res = ContextCompat
-                    .checkSelfPermission(this.getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE);
-            return res == PackageManager.PERMISSION_GRANTED;
-        } else {
-            // When SDK_INT is below 16, READ_EXTERNAL_STORAGE will also be granted if WRITE_EXTERNAL_STORAGE is granted.
-            final int res = ContextCompat
-                    .checkSelfPermission(this.getApplicationContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE);
-            return res == PackageManager.PERMISSION_GRANTED;
-        }
-    }
-
     /**
      * 开始请求业务后台启动游戏，获取服务端server session
      *
@@ -415,6 +427,7 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "onSuccess: " + resp.toString());
                 if (resp.code == 0) {
                     //　请求成功，从服务端获取到server session，启动游戏
+                    Toast.makeText(MainActivity.this, "启动云游戏", Toast.LENGTH_SHORT).show();
                     mSDK.start(resp.serverSession);
                 } else {
                     Toast.makeText(MainActivity.this, resp.toString(), Toast.LENGTH_LONG).show();
@@ -431,12 +444,70 @@ public class MainActivity extends AppCompatActivity {
 
     private void startDownload() {
         Log.d(TAG, "startDownload: ");
-        Log.d(TAG, "SavedPatchPath: " + mSavedPatchPath);
-        downloadTaskId = FileDownloader.getImpl().create(Constant.patchUrl)
-                .setPath(mSavedPatchPath)
-                .setListener(mDownloadLister)
-                .start();
+        Log.d(TAG, "SavedAPKPath: " + mSavedPatchPath);
+        if (downloadTaskId == -1) {
+            downloadTaskId = Aria.download(this)
+                    .load(Constant.patchUrl)
+                    .setFilePath(mSavedPatchPath)
+                    .create();
+            Log.d(TAG, "downloadTaskId: " + downloadTaskId);
+        } else {
+            Aria.download(this).load(downloadTaskId).resume();
+        }
     }
+
+    @Download.onTaskStart
+    protected void start(DownloadTask task) {
+        Log.d(TAG, "download start: ");
+        downloadProcess.setMessage("下载中...");
+        if (!isFinishing() && !downloadProcess.isShowing() && !isdownloadSlience) {
+            downloadProcess.show();
+        }
+    }
+
+    @Download.onTaskStop
+    protected void stop(DownloadTask task) {
+        Log.d(TAG, "download stop: ");
+        downloadProcess.show();
+    }
+
+    @Download.onTaskResume
+    protected void resume (DownloadTask task) {
+        Log.d(TAG, "download resume: ");
+        downloadProcess.show();
+    }
+
+    @Download.onTaskRunning
+    protected void running(DownloadTask task) {
+        Log.d(TAG, "download running: " + task.getPercent() + ", " + task.getSpeed());
+        currentPercent = task.getPercent();
+        if (!isFinishing() && downloadProcess.isShowing()) {
+            downloadProcess.setProgress(currentPercent);
+        }
+        if (!isStartDownload) {
+            isStartDownload = true;
+        }
+    }
+
+    @Download.onTaskComplete
+    protected void complete(DownloadTask task) {
+        Log.d(TAG, "download complete: ");
+        isDownloadSuccess = true;
+        if (isFinishing()) {
+            return;
+        }
+        downloadProcess.setMessage("下载成功！");
+        Toast.makeText(MainActivity.this, "安装包下载已完成！", Toast.LENGTH_SHORT).show();
+        downloadProcess.dismiss();
+        loadPatch();
+    }
+
+    @Download.onTaskFail
+    protected void failed(DownloadTask task, Exception e) {
+        Log.d(TAG, "failed: ");
+        downloadProcess.setMessage("下载失败 " + e.getMessage());
+    }
+
 
     /**
      * TcgSdk生命周期回调
@@ -452,7 +523,8 @@ public class MainActivity extends AppCompatActivity {
         public void onInitSuccess(String clientSession) {
             // 初始化成功，在此处请求业务后台
             Log.d(TAG, "onInitSuccess: ");
-            mClientSession = clientSession;
+            startCloudGame(clientSession, Constant.GAME_ID);
+            settingBarView.setViewShow(true);
         }
 
         @Override
@@ -491,60 +563,13 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    private final FileDownloadListener mDownloadLister = new FileDownloadListener() {
-        @Override
-        protected void pending(BaseDownloadTask task, int soFarBytes, int totalBytes) {
-            Log.d(TAG, "pending: " + totalBytes);
-            downloadProcess.setMessage("下载中...");
-            if (paused && !downloadProcess.isShowing()) {
-                downloadProcess.show();
-                paused = false;
-            }
-        }
-
-        @Override
-        protected void progress(BaseDownloadTask task, int soFarBytes, int totalBytes) {
-            currentPercent = soFarBytes / (double) totalBytes * 100;
-            Log.d(TAG, "progress: " + soFarBytes + "/" + totalBytes
-                    + " percent " + (int) Math.ceil(currentPercent) + "%");
-            downloadProcess.setProgress((int) Math.ceil(currentPercent));
-        }
-
-        @Override
-        protected void completed(BaseDownloadTask task) {
-            Log.d(TAG, "completed: ");
-            downloadProcess.setMessage("下载成功！");
-            isDownloadSuccess = true;
-            loadPatch();
-        }
-
-        @Override
-        protected void paused(BaseDownloadTask task, int soFarBytes, int totalBytes) {
-            Log.d(TAG, "paused: ");
-            paused = true;
-            downloadProcess.setMessage("暂停");
-            if (!downloadProcess.isShowing()) {
-                downloadProcess.show();
-            }
-        }
-
-        @Override
-        protected void error(BaseDownloadTask task, Throwable e) {
-            Log.d(TAG, "error: ", e);
-            downloadProcess.setMessage("下载失败 " + e.getMessage());
-        }
-
-        @Override
-        protected void warn(BaseDownloadTask task) {
-            Log.d(TAG, "warn: ");
-        }
-    };
-
     private void loadPatch() {
         Log.d(TAG, "loadPatch: ");
-        downloadProcess.dismiss();
-        loadPatchProcess.show();
-        loadPatchProcess.setMessage("游戏本地包正在加载中，大概需要一分钟左右，请稍后！！！");
+        if (!isFinishing()) {
+            downloadProcess.dismiss();
+            loadPatchProcess.show();
+            loadPatchProcess.setMessage("游戏本地包正在加载中，大概需要一分钟左右，请稍后！！！");
+        }
         isStartLoadPatch = true;
         TinkerInstaller.onReceiveUpgradePatch(getApplicationContext(), mSavedPatchPath);
     }
@@ -571,9 +596,10 @@ public class MainActivity extends AppCompatActivity {
                 NegativeButton.setText("5min后重启");
             }
         });
-
-        downloadProcess.dismiss();
-        loadPatchProcess.show();
+        if (!isFinishing()) {
+            downloadProcess.dismiss();
+            loadPatchProcess.show();
+        }
     }
 
     public class MsgReceiver extends BroadcastReceiver {
@@ -594,7 +620,9 @@ public class MainActivity extends AppCompatActivity {
                 restartDialog.setMessage(currentTimeLeft + "s之后将会自动重启!");
                 if (!restartDialog.isShowing()) {
                     loadPatchProcess.dismiss();
-                    restartDialog.show();
+                    if (!isFinishing()) {
+                        restartDialog.show();
+                    }
                 }
                 if (currentTimeLeft > 0) {
                     mHandler.sendEmptyMessageDelayed(RESTART_MSG, 1000);
